@@ -1,258 +1,397 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SLA Watchdog - Recruiter Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
-        .container { max-width: 700px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }
-        h1 { text-align: center; color: #2c3e50; }
-        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
-        th, td { padding: 10px 8px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background: #f0f0f0; }
-        .sla-missed { color: #fff; background: #e74c3c; border-radius: 4px; padding: 2px 8px; }
-        .sla-warning { color: #fff; background: #f39c12; border-radius: 4px; padding: 2px 8px; }
-        .sla-ok { color: #fff; background: #27ae60; border-radius: 4px; padding: 2px 8px; }
-        .login, .register { margin-bottom: 24px; }
-        .login input, .register input { padding: 6px; margin-right: 8px; }
-        .logout { float: right; cursor: pointer; color: #2980b9; }
-        #messageArea { padding: 10px; margin-bottom: 15px; border-radius: 4px; text-align: center; display: none; }
-        .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+      body {
+        font-family: Arial, sans-serif;
+        background: #f7f7f7;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 700px;
+        margin: 40px auto;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px #0001;
+        padding: 32px;
+      }
+      h1 {
+        text-align: center;
+        color: #2c3e50;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 24px;
+      }
+      th,
+      td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+      }
+      th {
+        background: #f0f0f0;
+      }
+      .sla-missed {
+        color: #fff;
+        background: #e74c3c;
+        border-radius: 4px;
+        padding: 2px 8px;
+      }
+      .sla-warning {
+        color: #fff;
+        background: #f39c12;
+        border-radius: 4px;
+        padding: 2px 8px;
+      }
+      .sla-ok {
+        color: #fff;
+        background: #27ae60;
+        border-radius: 4px;
+        padding: 2px 8px;
+      }
+      .login,
+      .register {
+        margin-bottom: 24px;
+      }
+      .login input,
+      .register input {
+        padding: 6px;
+        margin-right: 8px;
+      }
+      .logout {
+        float: right;
+        cursor: pointer;
+        color: #2980b9;
+      }
+      #messageArea {
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        text-align: center;
+        display: none;
+      }
+      .message-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .message-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
     </style>
-</head>
-<body>
-<div class="container">
-    <h1>SLA Watchdog</h1>
-    <div id="messageArea"></div>
-    <div class="login" id="loginBox">
-        <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
+  </head>
+  <body>
+    <div class="container">
+      <h1>SLA Watchdog</h1>
+      <div id="messageArea"></div>
+      <div class="login" id="loginBox">
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
         <button onclick="login()">Login</button>
         <button onclick="showRegister()" type="button">Sign Up</button>
-    </div>
-    <div class="register" id="registerBox" style="display:none; margin-bottom: 24px;">
-        <input type="text" id="regUsername" placeholder="Username">
-        <input type="password" id="regPassword" placeholder="Password">
-        <input type="email" id="regEmail" placeholder="Email (optional)">
+      </div>
+      <div
+        class="register"
+        id="registerBox"
+        style="display: none; margin-bottom: 24px"
+      >
+        <input type="text" id="regUsername" placeholder="Username" />
+        <input type="password" id="regPassword" placeholder="Password" />
+        <input type="email" id="regEmail" placeholder="Email (optional)" />
         <button onclick="registerUser()">Sign Up</button>
         <button onclick="showLogin()" type="button">Back to Login</button>
-    </div>
-    <div id="dashboard" style="display:none;">
+      </div>
+      <div id="dashboard" style="display: none">
         <span class="logout" onclick="logout()">Logout</span>
         <h2>Tickets</h2>
 
-        <form id="createTicketForm" style="margin-bottom: 20px;" onsubmit="createTicket(); return false;">
-            <h3>Create New Ticket</h3>
-            <div>
-                <label for="formTitle">Title:</label><br>
-                <input type="text" id="formTitle" name="title" required style="width: 95%; padding: 8px; margin-bottom: 10px;">
-            </div>
-            <div>
-                <label for="formDescription">Description:</label><br>
-                <textarea id="formDescription" name="description" required style="width: 95%; padding: 8px; margin-bottom: 10px;"></textarea>
-            </div>
-            <div>
-                <label for="formDeadline">Deadline:</label><br>
-                <input type="datetime-local" id="formDeadline" name="deadline" required style="padding: 8px; margin-bottom: 10px;">
-            </div>
-            <button type="submit">Create Ticket</button>
+        <form
+          id="createTicketForm"
+          style="margin-bottom: 20px"
+          onsubmit="createTicket(event)"
+        >
+          <h3>Create New Ticket</h3>
+          <div>
+            <label for="formTitle">Title:</label><br />
+            <input
+              type="text"
+              id="formTitle"
+              name="title"
+              required
+              style="width: 95%; padding: 8px; margin-bottom: 10px"
+            />
+          </div>
+          <div>
+            <label for="formDescription">Description:</label><br />
+            <textarea
+              id="formDescription"
+              name="description"
+              required
+              style="width: 95%; padding: 8px; margin-bottom: 10px"
+            ></textarea>
+          </div>
+          <div>
+            <label for="formDeadline">Deadline:</label><br />
+            <input
+              type="datetime-local"
+              id="formDeadline"
+              name="deadline"
+              required
+              style="padding: 8px; margin-bottom: 10px"
+            />
+          </div>
+          <button type="submit">Create Ticket</button>
         </form>
 
         <table>
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Deadline</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="ticketsTable">
-            </tbody>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Deadline</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="ticketsTable"></tbody>
         </table>
+      </div>
     </div>
-</div>
-<script>
-let token = localStorage.getItem('token') || '';
+    <script>
+      let token = localStorage.getItem("token") || "";
 
-function displayMessage(message, isSuccess) {
-    const messageArea = document.getElementById('messageArea');
-    messageArea.textContent = message;
-    messageArea.className = isSuccess ? 'message-success' : 'message-error';
-    messageArea.style.display = 'block';
-    // Hide message after 5 seconds
-    setTimeout(() => {
-        messageArea.style.display = 'none';
-    }, 5000);
-}
-
-function showDashboard() {
-    document.getElementById('loginBox').style.display = 'none';
-    document.getElementById('registerBox').style.display = 'none';
-    document.getElementById('dashboard').style.display = '';
-    fetchTickets();
-}
-
-function showRegister() {
-    document.getElementById('loginBox').style.display = 'none';
-    document.getElementById('registerBox').style.display = '';
-}
-
-function showLogin() {
-    document.getElementById('loginBox').style.display = '';
-    document.getElementById('registerBox').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'none';
-}
-
-function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    fetch('/api-token-auth/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.token) {
-            token = data.token;
-            localStorage.setItem('token', token);
-            showDashboard();
-            displayMessage('Login successful!', true);
-        } else {
-            displayMessage('Login failed! Check credentials.', false);
+      // Add getCookie function for CSRF token
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
         }
-    })
-    .catch(error => {
-        console.error('Login error:', error);
-        displayMessage('Login request failed. Please try again.', false);
-    });
-    return false;
-}
+        return cookieValue;
+      }
 
-function logout() {
-    token = '';
-    localStorage.removeItem('token');
-    showLogin();
-}
+      function displayMessage(message, isSuccess) {
+        const messageArea = document.getElementById("messageArea");
+        messageArea.textContent = message;
+        messageArea.className = isSuccess ? "message-success" : "message-error";
+        messageArea.style.display = "block";
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          messageArea.style.display = "none";
+        }, 5000);
+      }
 
-function fetchTickets() {
-    fetch('/api/tickets/', {
-        headers: { 'Authorization': 'Token ' + token }
-    })
-    .then(response => {
-        if (!response.ok) {
-            // Handle non-2xx responses (e.g., 401, 429)
-            return response.json().then(errData => {
-                throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        const tbody = document.getElementById('ticketsTable');
-        tbody.innerHTML = ''; // Clear existing rows
-        if (Array.isArray(data)) {
-            data.forEach(ticket => {
-                let status = '';
+      function showDashboard() {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("registerBox").style.display = "none";
+        document.getElementById("dashboard").style.display = "";
+        fetchTickets();
+      }
+
+      function showRegister() {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("registerBox").style.display = "";
+      }
+
+      function showLogin() {
+        document.getElementById("loginBox").style.display = "";
+        document.getElementById("registerBox").style.display = "none";
+        document.getElementById("dashboard").style.display = "none";
+      }
+
+      function login() {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        fetch("/api-token-auth/", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          body: JSON.stringify({ username, password }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.token) {
+              token = data.token;
+              localStorage.setItem("token", token);
+              showDashboard();
+              displayMessage("Login successful!", true);
+            } else {
+              displayMessage("Login failed! Check credentials.", false);
+            }
+          })
+          .catch((error) => {
+            console.error("Login error:", error);
+            displayMessage("Login request failed. Please try again.", false);
+          });
+        return false;
+      }
+
+      function logout() {
+        token = "";
+        localStorage.removeItem("token");
+        showLogin();
+      }
+
+      function fetchTickets() {
+        fetch("/api/tickets/", {
+          headers: { 
+            "Authorization": "Token " + token,
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+        })
+          .then((response) => {
+            if (!response.ok) {
+              // Handle non-2xx responses (e.g., 401, 429)
+              return response.json().then((errData) => {
+                throw new Error(
+                  errData.detail || `HTTP error! status: ${response.status}`,
+                );
+              });
+            }
+            return response.json();
+          })
+          .then((data) => {
+            const tbody = document.getElementById("ticketsTable");
+            tbody.innerHTML = ""; // Clear existing rows
+            if (Array.isArray(data)) {
+              data.forEach((ticket) => {
+                let status = "";
                 if (ticket.sla_missed) {
-                    status = '<span class="sla-missed">SLA Missed</span>';
+                  status = '<span class="sla-missed">SLA Missed</span>';
                 } else if (ticket.sla_warning_sent) {
-                    status = '<span class="sla-warning">SLA Warning</span>';
+                  status = '<span class="sla-warning">SLA Warning</span>';
                 } else {
-                    status = '<span class="sla-ok">OK</span>';
+                  status = '<span class="sla-ok">OK</span>';
                 }
                 tbody.innerHTML += `<tr><td>${ticket.title}</td><td>${new Date(ticket.deadline).toLocaleString()}</td><td>${status}</td></tr>`;
-            });
-        } else {
-            // Handle cases where data might not be an array (e.g. rate limit response from DRF-ratelimit)
-            if (data.detail) { // DRF-ratelimit often returns error details in 'detail'
-                 throw new Error(data.detail);
+              });
+            } else {
+              // Handle cases where data might not be an array (e.g. rate limit response from DRF-ratelimit)
+              if (data.detail) {
+                // DRF-ratelimit often returns error details in 'detail'
+                throw new Error(data.detail);
+              }
             }
+          })
+          .catch((error) => {
+            console.error("Error fetching tickets:", error);
+            displayMessage(`Error fetching tickets: ${error.message}`, false);
+            if (
+              error.message.includes(
+                "Authentication credentials were not provided",
+              ) ||
+              error.message.includes("Invalid token")
+            ) {
+              logout(); // If auth error, force logout
+            }
+          });
+      }
+
+      function createTicket(event) {
+        // Prevent default form submission if called from form submit
+        if (event) {
+          event.preventDefault();
         }
-    })
-    .catch(error => {
-        console.error('Error fetching tickets:', error);
-        displayMessage(`Error fetching tickets: ${error.message}`, false);
-        if (error.message.includes("Authentication credentials were not provided") || error.message.includes("Invalid token")) {
-            logout(); // If auth error, force logout
+
+        console.log("createTicket called");
+        const title = document.getElementById("formTitle").value;
+        const description = document.getElementById("formDescription").value;
+        const deadline = document.getElementById("formDeadline").value;
+
+        if (!title || !description || !deadline) {
+          displayMessage(
+            "Please fill in all fields for the new ticket.",
+            false,
+          );
+          return;
         }
-    });
-}
 
-function createTicket() {
-    console.log('createTicket called');
-    const title = document.getElementById('formTitle').value;
-    const description = document.getElementById('formDescription').value;
-    const deadline = document.getElementById('formDeadline').value;
+        const ticketData = {
+          title,
+          description,
+          deadline,
+        };
 
-    if (!title || !description || !deadline) {
-        displayMessage('Please fill in all fields for the new ticket.', false);
-        return;
-    }
+        console.log("Creating ticket with data:", ticketData);
+        console.log("Using token:", token);
 
-    const ticketData = {
-        title,
-        description,
-        deadline
-    };
+        fetch("/api/tickets/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Token " + token,
+            "X-CSRFToken": getCookie("csrftoken")
+          },
+          body: JSON.stringify(ticketData),
+        })
+          .then(function(response) {
+            console.log("Ticket API response status:", response.status);
+            if (response.ok) {
+              return response.json();
+            } else {
+              return response.json().then(function(errData) {
+                throw new Error(
+                  errData.detail ||
+                    Object.values(errData).join(", ") ||
+                    "HTTP error! status: " + response.status
+                );
+              });
+            }
+          })
+          .then(function(data) {
+            console.log("Ticket API response data:", data);
+            // Show success message
+            displayMessage("Ticket created and email sent!", true);
+            fetchTickets();
+            document.getElementById("createTicketForm").reset();
+          })
+          .catch(function(error) {
+            console.error("Error creating ticket:", error);
+            displayMessage("Failed to create ticket: " + error.message, false);
+          });
+      }
 
-    fetch('/api/tickets/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Token ' + token,
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify(ticketData)
-    })
-    .then(response => {
-        console.log('Ticket API response status:', response.status);
-        if (response.ok) {
-            return response.json();
-        } else {
-            return response.json().then(errData => {
-                throw new Error(errData.detail || Object.values(errData).join(', ') || `HTTP error! status: ${response.status}`);
-            });
-        }
-    })
-    .then(data => {
-        console.log('Ticket API response data:', data);
-        displayMessage('Ticket created successfully!', true);
-        fetchTickets();
-        document.getElementById('createTicketForm').reset();
-    })
-    .catch(error => {
-        console.error('Error creating ticket:', error);
-        displayMessage(`Failed to create ticket: ${error.message}`, false);
-    });
-}
-
-function registerUser() {
-    const username = document.getElementById('regUsername').value;
-    const password = document.getElementById('regPassword').value;
-    const email = document.getElementById('regEmail').value;
-    fetch('/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, email })
-    })
-    .then(r => r.json().then(data => ({ status: r.status, data })))
-    .then(({ status, data }) => {
-        if (status === 201) {
-            displayMessage('Registration successful! Please log in.', true);
-            showLogin();
-        } else {
-            displayMessage(data.error || 'Registration failed.', false);
-        }
-    })
-    .catch(error => {
-        console.error('Registration error:', error);
-        displayMessage('Registration request failed. Please try again.', false);
-    });
-    return false;
-}
-</script>
-</body>
+      function registerUser() {
+        const username = document.getElementById("regUsername").value;
+        const password = document.getElementById("regPassword").value;
+        const email = document.getElementById("regEmail").value;
+        fetch("/register/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password, email }),
+        })
+          .then((r) => r.json().then((data) => ({ status: r.status, data })))
+          .then(({ status, data }) => {
+            if (status === 201) {
+              displayMessage("Registration successful! Please log in.", true);
+              showLogin();
+            } else {
+              displayMessage(data.error || "Registration failed.", false);
+            }
+          })
+          .catch((error) => {
+            console.error("Registration error:", error);
+            displayMessage(
+              "Registration request failed. Please try again.",
+              false,
+            );
+          });
+        return false;
+      }
+    </script>
+  </body>
 </html>

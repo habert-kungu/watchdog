@@ -20,24 +20,11 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        print("[DEBUG] perform_create called")
-        ticket = serializer.save(owner=self.request.user)
-        try:
-            print(f"[DEBUG] Preparing to send email for new ticket '{ticket.title}' to {self.request.user.email}")
-            send_mail(
-                subject=f"New Ticket Created: {ticket.title}",
-                message=f"A new ticket has been created.\n\nTitle: {ticket.title}\nDescription: {ticket.description}\nDeadline: {ticket.deadline}",
-                from_email=None,  # Uses DEFAULT_FROM_EMAIL from settings
-                recipient_list=[self.request.user.email],
-                fail_silently=False,
-            )
-            print(f"[EMAIL SUCCESS] New ticket confirmation email sent for '{ticket.title}' to {self.request.user.email}")
-        except Exception as e:
-            print(f"[EMAIL ERROR] Failed to send new ticket confirmation email for '{ticket.title}' to {self.request.user.email}. Error: {e}")
-        self.notification_message = f"Ticket '{ticket.title}' created. Please check your email for confirmation."
-
     def create(self, request, *args, **kwargs):
+        print("[DEBUG] TicketViewSet.create called")
+        print("[DEBUG] Request data:", request.data)
+        print("[DEBUG] User:", request.user)
+
         response = super().create(request, *args, **kwargs)
         # Attach notification message if available
         if (
@@ -45,8 +32,32 @@ class TicketViewSet(viewsets.ModelViewSet):
             and hasattr(response, "data")
             and response.data is not None
         ):
+            print("[DEBUG] Adding notification message to response")
             response.data["notification"] = self.notification_message
         return response
+
+    def perform_create(self, serializer):
+        print("[DEBUG] perform_create called")
+        ticket = serializer.save(owner=self.request.user)
+        try:
+            print(
+                f"[DEBUG] Preparing to send email for new ticket '{ticket.title}' to {self.request.user.email}"
+            )
+            send_mail(
+                subject=f"New Ticket Created: {ticket.title}",
+                message=f"A new ticket has been created.\n\nTitle: {ticket.title}\nDescription: {ticket.description}\nDeadline: {ticket.deadline}",
+                from_email=None,  # Uses DEFAULT_FROM_EMAIL from settings
+                recipient_list=[self.request.user.email],
+                fail_silently=False,
+            )
+            print(
+                f"[EMAIL SUCCESS] New ticket confirmation email sent for '{ticket.title}' to {self.request.user.email}"
+            )
+        except Exception as e:
+            print(
+                f"[EMAIL ERROR] Failed to send new ticket confirmation email for '{ticket.title}' to {self.request.user.email}. Error: {e}"
+            )
+        self.notification_message = f"Ticket '{ticket.title}' created. Please check your email for confirmation."
 
 
 def dashboard(request):
