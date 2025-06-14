@@ -32,6 +32,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "watchdog-kp4h.onrender.com",
+    "localhost",
 ]
 
 
