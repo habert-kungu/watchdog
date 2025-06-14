@@ -14,8 +14,8 @@
         .sla-missed { color: #fff; background: #e74c3c; border-radius: 4px; padding: 2px 8px; }
         .sla-warning { color: #fff; background: #f39c12; border-radius: 4px; padding: 2px 8px; }
         .sla-ok { color: #fff; background: #27ae60; border-radius: 4px; padding: 2px 8px; }
-        .login { margin-bottom: 24px; }
-        .login input { padding: 6px; margin-right: 8px; }
+        .login, .register { margin-bottom: 24px; }
+        .login input, .register input { padding: 6px; margin-right: 8px; }
         .logout { float: right; cursor: pointer; color: #2980b9; }
         #messageArea { padding: 10px; margin-bottom: 15px; border-radius: 4px; text-align: center; display: none; }
         .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
@@ -30,30 +30,34 @@
         <input type="text" id="username" placeholder="Username">
         <input type="password" id="password" placeholder="Password">
         <button onclick="login()">Login</button>
+        <button onclick="showRegister()" type="button">Sign Up</button>
+    </div>
+    <div class="register" id="registerBox" style="display:none; margin-bottom: 24px;">
+        <input type="text" id="regUsername" placeholder="Username">
+        <input type="password" id="regPassword" placeholder="Password">
+        <input type="email" id="regEmail" placeholder="Email (optional)">
+        <button onclick="registerUser()">Sign Up</button>
+        <button onclick="showLogin()" type="button">Back to Login</button>
     </div>
     <div id="dashboard" style="display:none;">
         <span class="logout" onclick="logout()">Logout</span>
         <h2>Tickets</h2>
 
-        <form id="createTicketForm" style="margin-bottom: 20px;">
+        <form id="createTicketForm" style="margin-bottom: 20px;" onsubmit="createTicket(); return false;">
             <h3>Create New Ticket</h3>
             <div>
-                <label for="title">Title:</label><br>
+                <label for="formTitle">Title:</label><br>
                 <input type="text" id="formTitle" name="title" required style="width: 95%; padding: 8px; margin-bottom: 10px;">
             </div>
             <div>
-                <label for="description">Description:</label><br>
+                <label for="formDescription">Description:</label><br>
                 <textarea id="formDescription" name="description" required style="width: 95%; padding: 8px; margin-bottom: 10px;"></textarea>
             </div>
             <div>
-                <label for="deadline">Deadline:</label><br>
+                <label for="formDeadline">Deadline:</label><br>
                 <input type="datetime-local" id="formDeadline" name="deadline" required style="padding: 8px; margin-bottom: 10px;">
             </div>
-            <div>
-                <label for="assigned_recruiter_email">Assigned Recruiter Email:</label><br>
-                <input type="email" id="formEmail" name="assigned_recruiter_email" required style="width: 95%; padding: 8px; margin-bottom: 10px;">
-            </div>
-            <button type="button" onclick="createTicket()">Create Ticket</button>
+            <button type="submit">Create Ticket</button>
         </form>
 
         <table>
@@ -85,12 +89,19 @@ function displayMessage(message, isSuccess) {
 
 function showDashboard() {
     document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('registerBox').style.display = 'none';
     document.getElementById('dashboard').style.display = '';
     fetchTickets();
 }
 
+function showRegister() {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('registerBox').style.display = '';
+}
+
 function showLogin() {
     document.getElementById('loginBox').style.display = '';
+    document.getElementById('registerBox').style.display = 'none';
     document.getElementById('dashboard').style.display = 'none';
 }
 
@@ -117,6 +128,7 @@ function login() {
         console.error('Login error:', error);
         displayMessage('Login request failed. Please try again.', false);
     });
+    return false;
 }
 
 function logout() {
@@ -170,12 +182,12 @@ function fetchTickets() {
 }
 
 function createTicket() {
+    console.log('createTicket called');
     const title = document.getElementById('formTitle').value;
     const description = document.getElementById('formDescription').value;
     const deadline = document.getElementById('formDeadline').value;
-    const assigned_recruiter_email = document.getElementById('formEmail').value;
 
-    if (!title || !description || !deadline || !assigned_recruiter_email) {
+    if (!title || !description || !deadline) {
         displayMessage('Please fill in all fields for the new ticket.', false);
         return;
     }
@@ -183,9 +195,7 @@ function createTicket() {
     const ticketData = {
         title,
         description,
-        deadline,
-        assigned_recruiter_email,
-        status: 'Open' // Default status, or remove if backend handles it
+        deadline
     };
 
     fetch('/api/tickets/', {
@@ -193,23 +203,25 @@ function createTicket() {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Token ' + token,
-            'X-CSRFToken': getCookie('csrftoken') // Django might need CSRF token for POST
+            'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify(ticketData)
     })
     .then(response => {
+        console.log('Ticket API response status:', response.status);
         if (response.ok) {
             return response.json();
         } else {
-            return response.json().then(errData => { // Try to get error details from body
+            return response.json().then(errData => {
                 throw new Error(errData.detail || Object.values(errData).join(', ') || `HTTP error! status: ${response.status}`);
             });
         }
     })
     .then(data => {
+        console.log('Ticket API response data:', data);
         displayMessage('Ticket created successfully!', true);
-        fetchTickets(); // Refresh the list
-        document.getElementById('createTicketForm').reset(); // Clear form
+        fetchTickets();
+        document.getElementById('createTicketForm').reset();
     })
     .catch(error => {
         console.error('Error creating ticket:', error);
@@ -217,26 +229,29 @@ function createTicket() {
     });
 }
 
-// Helper function to get CSRF token if needed
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
+function registerUser() {
+    const username = document.getElementById('regUsername').value;
+    const password = document.getElementById('regPassword').value;
+    const email = document.getElementById('regEmail').value;
+    fetch('/register/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, email })
+    })
+    .then(r => r.json().then(data => ({ status: r.status, data })))
+    .then(({ status, data }) => {
+        if (status === 201) {
+            displayMessage('Registration successful! Please log in.', true);
+            showLogin();
+        } else {
+            displayMessage(data.error || 'Registration failed.', false);
         }
-    }
-    return cookieValue;
-}
-
-if (token) {
-    showDashboard();
-} else {
-    showLogin();
+    })
+    .catch(error => {
+        console.error('Registration error:', error);
+        displayMessage('Registration request failed. Please try again.', false);
+    });
+    return false;
 }
 </script>
 </body>
