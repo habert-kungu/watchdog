@@ -1,6 +1,174 @@
 # SLA Watchdog
 
-A tiny Django REST API that tracks ticket deadlines and notifies users when a ticket is about to, or has already, missed its SLA.
+A Django-based ticket management system with SLA (Service Level Agreement) monitoring and email notifications. This application helps track ticket deadlines and automatically notifies users when tickets are approaching or have missed their SLA deadlines.
+
+## Features
+
+- **User Authentication**
+
+  - Token-based authentication using Django REST Framework
+  - User registration with email requirement
+  - Secure login/logout functionality
+
+- **Ticket Management**
+
+  - Create, read, update, and delete tickets
+  - Set deadlines for tickets
+  - Track ticket status and SLA compliance
+  - Email notifications for ticket creation
+
+- **SLA Monitoring**
+
+  - Automatic SLA violation detection
+  - Warning notifications before SLA breach (1 hour before deadline)
+  - Missed SLA notifications
+  - Automated periodic checks via management command
+
+- **Email Notifications**
+
+  - Ticket creation confirmation
+  - SLA warning alerts (1 hour before deadline)
+  - SLA violation notifications
+  - Configurable email settings via environment variables
+
+- **Security**
+  - CSRF protection
+  - Token-based API authentication
+  - Rate limiting for API endpoints
+
+## Installation
+
+1. Clone the repository:
+
+```bash
+git clone <repository-url>
+cd watchdog
+```
+
+2. Create and activate a virtual environment:
+
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+```
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Create `.env` file in the project root with your email settings:
+
+```env
+SECRET_KEY=your-secret-key
+EMAIL_HOST=smtp.yourprovider.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@example.com
+EMAIL_HOST_PASSWORD=your-email-password
+DEFAULT_FROM_EMAIL=noreply@example.com
+```
+
+5. Run migrations:
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+6. Create a superuser:
+
+```bash
+python manage.py createsuperuser
+```
+
+## Usage
+
+1. Start the development server:
+
+```bash
+python manage.py runserver
+```
+
+2. Access the dashboard at `http://localhost:8000/dashboard/`
+
+3. Register a new user or login with existing credentials
+
+4. Create tickets with:
+   - Title
+   - Description
+   - Deadline
+
+## API Endpoints
+
+- `POST /register/`: Register new user
+- `POST /api-token-auth/`: Obtain authentication token
+- `GET /api/tickets/`: List all tickets
+- `POST /api/tickets/`: Create new ticket
+- `GET /api/tickets/{id}/`: Retrieve specific ticket
+- `PUT /api/tickets/{id}/`: Update specific ticket
+- `DELETE /api/tickets/{id}/`: Delete specific ticket
+
+## SLA Monitoring
+
+The system includes automated SLA monitoring with two types of notifications:
+
+1. **Warning Notification**: Sent 1 hour before the deadline
+2. **SLA Missed Notification**: Sent when a ticket passes its deadline
+
+To enable automated SLA checking, set up a cron job to run the management command:
+
+```bash
+# Run every 15 minutes
+*/15 * * * * /path/to/venv/bin/python /path/to/project/manage.py check_sla
+```
+
+## Email Configuration
+
+Configure email settings in your `.env` file:
+
+- `EMAIL_BACKEND`: Django email backend (default: smtp backend)
+- `EMAIL_HOST`: SMTP server hostname
+- `EMAIL_PORT`: SMTP port (usually 587 for TLS)
+- `EMAIL_USE_TLS`: Whether to use TLS (True/False)
+- `EMAIL_HOST_USER`: SMTP username
+- `EMAIL_HOST_PASSWORD`: SMTP password
+- `DEFAULT_FROM_EMAIL`: Default sender address
+
+## Rate Limiting
+
+The API includes rate limiting to prevent abuse:
+
+- GET requests: 10 per minute per user
+- POST requests: 5 per minute per user
+
+## Development
+
+### Running Tests
+
+```bash
+python manage.py test
+```
+
+### Check Code Style
+
+```bash
+flake8
+black .
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Features
 
@@ -126,4 +294,5 @@ Example cron job (runs every 15 minutes):
 ```cron
 */15 * * * * /path/to/your/project/venv/bin/python /path/to/your/project/manage.py check_sla >> /path/to/your/project/logs/check_sla.log 2>&1
 ```
+
 Make sure to replace `/path/to/your/project/` with the actual path to your project directory and adjust paths for your virtual environment and log file as needed.
