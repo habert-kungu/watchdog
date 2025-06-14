@@ -43,9 +43,28 @@ class TicketViewSet(viewsets.ModelViewSet):
             print(
                 f"[DEBUG] Preparing to send email for new ticket '{ticket.title}' to {self.request.user.email}"
             )
+            email_subject = f"🎫 New Ticket Created: {ticket.title}"
+            email_message = f"""
+🎉 Great news! A new ticket has been created!
+
+📝 Ticket Details:
+------------------
+🏷️ Title: {ticket.title}
+📋 Description: {ticket.description}
+⏰ Deadline: {ticket.deadline.strftime('%B %d, %Y at %I:%M %p')}
+
+🚀 We're on it! Our team will handle this ticket with top priority.
+⏱️ Keep an eye on the deadline to maintain our service level agreement.
+
+🌟 Thank you for using our ticketing system!
+💪 Together, we make great things happen.
+
+Best regards,
+🤖 Your Watchdog Team
+"""
             send_mail(
-                subject=f"New Ticket Created: {ticket.title}",
-                message=f"A new ticket has been created.\n\nTitle: {ticket.title}\nDescription: {ticket.description}\nDeadline: {ticket.deadline}",
+                subject=email_subject,
+                message=email_message,
                 from_email=None,  # Uses DEFAULT_FROM_EMAIL from settings
                 recipient_list=[self.request.user.email],
                 fail_silently=False,

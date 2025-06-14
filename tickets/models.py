@@ -9,60 +9,163 @@ class Ticket(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     deadline = models.DateTimeField()
-    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    owner = models.ForeignKey(
+        get_user_model(), on_delete=models.CASCADE, related_name="tickets"
+    )
     sla_missed = models.BooleanField(default=False)
     sla_warning_sent = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
 
+    def get_owner_email(self):
+        # Get the user directly from the database
+        User = get_user_model()
+        try:
+            user = User.objects.select_related().get(pk=self.owner.pk)
+            return user.email
+        except Exception:
+            return None
+
     def check_and_notify_sla(self):
-        if not self.sla_missed and timezone.now() > self.deadline:
+        current_time = timezone.now()
+        deadline_time = timezone.localtime(self.deadline)
+        owner_email = self.owner_email
+
+        if not owner_email:
+            return
+
+        if not self.sla_missed and current_time > deadline_time:
             self.sla_missed = True
-            # Save before attempting to send email
             try:
-                print(f"[DEBUG] Preparing to send SLA Missed email for ticket '{self.title}' to {self.owner.email}")
-                send_mail(
-                    subject=f"SLA Missed: {self.title}",
-                    message=f"Ticket '{self.title}' has missed its SLA deadline.",
-                    from_email=None, # Uses DEFAULT_FROM_EMAIL from settings
-                    recipient_list=[self.owner.email],
-                    fail_silently=False, # Changed in previous step
+                print(
+                    f"[DEBUG] Preparing to send SLA Missed email for ticket '{self.title}'"
                 )
-                print(f"[EMAIL SUCCESS] SLA Missed email sent for ticket '{self.title}' to {self.owner.email}")
-                self.save() # Save after successful email send
-            except Exception as e:
-                print(f"[EMAIL ERROR] Failed to send SLA Missed email for ticket '{self.title}' to {self.owner.email}. Error: {e}")
-                # Optionally, re-raise the exception if you want the command to fail loudly
-                # or handle the fact that the ticket was marked sla_missed but email failed.
-                # For now, just log and the sla_missed status is already set.
-                # self.save() might be called here if partial state should be saved despite email failure.
-                # Current logic: sla_missed is True, email fails, ticket reflects sla_missed but no email sent.
-                # Re-saving self.sla_missed = True here is redundant if it was already True.
-                # If email must succeed for sla_missed to be true, then move self.sla_missed = True inside try.
-                # For now, we assume setting sla_missed is independent of email success.
-                # We will save the sla_missed status regardless of email outcome for now.
+                email_subject = f"🚨 Attention Required: {self.title} needs your immediate attention!"
+                email_message = f"""
+⚡ URGENT ACTION NEEDED ⚡
+========================
+
+Hello there! 👋
+
+🔔 We noticed that the ticket "{self.title}" has missed its SLA deadline.
+
+📋 Ticket Details:
+----------------
+✨ Title: {self.title}
+⏰ Original Deadline: {deadline_time.strftime('%B %d, %Y at %I:%M %p')}
+⌛ Time Elapsed: {timezone.localtime(current_time).strftime('%B %d, %Y at %I:%M %p')}
+
+🎯 Required Actions:
+-----------------
+1. 🔍 Review ticket details
+2. 📝 Update the status
+3. 🤝 Coordinate with team if needed
+4. 🚀 Expedite resolution
+
+💫 Quick Access:
+-------------
+🌐 Dashboard: Check your dashboard for full details
+📱 Mobile: Use our mobile view for on-the-go updates
+🔄 Status: Update directly from the ticket page
+
+💡 Pro Tips:
+----------
+• Fast response = Happy customers! 🌟
+• Need help? Your team is just a message away! 💪
+• Document any blockers for better tracking 📊
+
+Keep up the amazing work! 🌈
+
+Best wishes,
+🤖 Your Friendly Watchdog Team
+
+P.S. Remember: Every resolved ticket makes our customers smile! 🎉
+"""
+                send_mail(
+                    subject=email_subject,
+                    message=email_message,
+                    from_email=None,
+                    recipient_list=[owner_email],
+                    fail_silently=False,
+                )
+                print(
+                    f"[EMAIL SUCCESS] SLA Missed email sent for ticket '{self.title}'"
+                )
                 self.save()
+            except Exception as e:
+                print(
+                    f"[EMAIL ERROR] Failed to send SLA Missed email for ticket '{self.title}'. Error: {e}"
+                )
+                self.save()
+
         elif (
             not self.sla_warning_sent
-            and (self.deadline - timezone.now()).total_seconds() < 3600
-            and timezone.now() < self.deadline
+            and (deadline_time - current_time).total_seconds() < 3600
+            and current_time < deadline_time
         ):
             self.sla_warning_sent = True
-            # Save before attempting to send email
             try:
-                print(f"[DEBUG] Preparing to send SLA Warning email for ticket '{self.title}' to {self.owner.email}")
-                send_mail(
-                    subject=f"SLA Warning: {self.title}",
-                    message=f"Ticket '{self.title}' is about to miss its SLA deadline in less than 1 hour.",
-                    from_email=None, # Uses DEFAULT_FROM_EMAIL from settings
-                    recipient_list=[self.owner.email],
-                    fail_silently=False, # Changed in previous step
+                remaining_minutes = int(
+                    (deadline_time - current_time).total_seconds() / 60
                 )
-                print(f"[EMAIL SUCCESS] SLA Warning email sent for ticket '{self.title}' to {self.owner.email}")
-                self.save() # Save after successful email send
+                print(
+                    f"[DEBUG] Preparing to send SLA Warning email for ticket '{self.title}'"
+                )
+
+                email_subject = (
+                    f"⏰ Time Alert: {self.title} - Let's Beat the Clock! 🎯"
+                )
+                email_message = f"""
+✨ SLA Countdown Alert! ✨
+========================
+
+Hey there, Ticket Hero! 🦸‍♂️
+
+⏳ Time Check: Only {remaining_minutes} minutes remaining! 
+
+🎫 Ticket Snapshot:
+-----------------
+🌟 Title: {self.title}
+📝 Description: {str(self.description)[:100]}{"..." if len(str(self.description)) > 100 else ""}
+⏰ Deadline: {deadline_time.strftime('%B %d, %Y at %I:%M %p')}
+🕒 Current Time: {timezone.localtime(current_time).strftime('%B %d, %Y at %I:%M %p')}
+
+🚀 Action Station:
+---------------
+1. 🔍 Quick Review Time!
+2. 📊 Status Update Needed?
+3. 🏃‍♂️ Sprint to the Finish!
+4. 🤝 Need Help? We're Here!
+
+💫 Power Tips:
+-----------
+• 🎯 Focus Mode: This ticket is your priority
+• 🗣️ Communication is key
+• 📱 Mobile dashboard available
+• ⚡ Quick actions can save the day
+
+You're doing great! Let's wrap this up before the deadline! 🎉
+
+Keep rocking! 🌟
+Your Watchdog Team 🐕
+
+P.S. Race against time, but keep that quality high! 💪
+P.P.S. You're awesome - you've got this! 🌈
+"""
+                send_mail(
+                    subject=email_subject,
+                    message=email_message,
+                    from_email=None,
+                    recipient_list=[owner_email],
+                    fail_silently=False,
+                )
+                print(
+                    f"[EMAIL SUCCESS] SLA Warning email sent for ticket '{self.title}'"
+                )
+                self.save()
             except Exception as e:
-                print(f"[EMAIL ERROR] Failed to send SLA Warning email for ticket '{self.title}' to {self.owner.email}. Error: {e}")
-                # Similar to above, consider error handling strategy.
-                # self.save() to persist sla_warning_sent = True
+                print(
+                    f"[EMAIL ERROR] Failed to send SLA Warning email for ticket '{self.title}'. Error: {e}"
+                )
                 self.save()
