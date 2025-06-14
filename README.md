@@ -1,6 +1,6 @@
 # SLA Watchdog
 
-![SLA Watchdog Logo](https://github.com/habert-kungu/watchdog/tree/main/tickets/templates/tickets/watchdog.png)
+![SLA Watchdog Logo](https://github.com/habert-kungu/watchdog/tickets/templates/tickets/watchdog.png)
 
 A Django-based ticket management system with SLA (Service Level Agreement) monitoring and email notifications. This application helps track ticket deadlines and automatically notifies users when tickets are approaching or have missed their SLA deadlines.
 
