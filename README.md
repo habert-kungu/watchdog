@@ -92,3 +92,38 @@ Or create a Django management command for this purpose.
 ## License
 
 MIT
+
+## Email Configuration
+
+This project sends emails for ticket creation and SLA notifications. For emails to function correctly, you must configure the following environment variables. These can be placed in a `.env` file in the project root directory.
+
+- `EMAIL_BACKEND`: The Django email backend to use. Defaults to `django.core.mail.backends.smtp.EmailBackend`.
+- `EMAIL_HOST`: The hostname or IP address of the SMTP server. (e.g., `smtp.example.com`)
+- `EMAIL_PORT`: The port number for the SMTP server. (e.g., `587` for TLS, `25` for non-TLS)
+- `EMAIL_USE_TLS`: Set to `True` if the SMTP server uses TLS, `False` otherwise.
+- `EMAIL_HOST_USER`: The username for authenticating with the SMTP server.
+- `EMAIL_HOST_PASSWORD`: The password for authenticating with the SMTP server.
+- `DEFAULT_FROM_EMAIL`: The default email address to be used for outgoing emails (e.g., `noreply@yourdomain.com`). Ensure this address is authorized to send emails through your SMTP provider.
+
+Example `.env` file content:
+
+```
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.mailtrap.io
+EMAIL_PORT=2525
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your_mailtrap_username
+EMAIL_HOST_PASSWORD=your_mailtrap_password
+DEFAULT_FROM_EMAIL=noreply@example.com
+```
+
+## Running SLA Checks
+
+The command `python manage.py check_sla` is available to check for ticket SLA warnings and misses. This command should be scheduled to run regularly (e.g., every 5-15 minutes) using a task scheduler like cron.
+
+Example cron job (runs every 15 minutes):
+
+```cron
+*/15 * * * * /path/to/your/project/venv/bin/python /path/to/your/project/manage.py check_sla >> /path/to/your/project/logs/check_sla.log 2>&1
+```
+Make sure to replace `/path/to/your/project/` with the actual path to your project directory and adjust paths for your virtual environment and log file as needed.
