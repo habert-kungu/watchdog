@@ -30,7 +30,9 @@ SECRET_KEY = "django-insecure-t1z!o*gsi)=c+&1db=n)4^-o-)td$-=fz7#ync5$k_@myr-1so
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "watchdog-kp4h.onrender.com",
+]
 
 
 # Application definition
