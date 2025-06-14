@@ -1,6 +1,10 @@
 Django>=4.2
- djangorestframework
+djangorestframework
 djangorestframework-simplejwt
 django-ratelimit
 python-dotenv
 gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary
+dj-database-url
