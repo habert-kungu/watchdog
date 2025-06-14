@@ -17,11 +17,15 @@
         .login { margin-bottom: 24px; }
         .login input { padding: 6px; margin-right: 8px; }
         .logout { float: right; cursor: pointer; color: #2980b9; }
+        #messageArea { padding: 10px; margin-bottom: 15px; border-radius: 4px; text-align: center; display: none; }
+        .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>SLA Watchdog</h1>
+    <div id="messageArea"></div>
     <div class="login" id="loginBox">
         <input type="text" id="username" placeholder="Username">
         <input type="password" id="password" placeholder="Password">
@@ -30,6 +34,28 @@
     <div id="dashboard" style="display:none;">
         <span class="logout" onclick="logout()">Logout</span>
         <h2>Tickets</h2>
+
+        <form id="createTicketForm" style="margin-bottom: 20px;">
+            <h3>Create New Ticket</h3>
+            <div>
+                <label for="title">Title:</label><br>
+                <input type="text" id="formTitle" name="title" required style="width: 95%; padding: 8px; margin-bottom: 10px;">
+            </div>
+            <div>
+                <label for="description">Description:</label><br>
+                <textarea id="formDescription" name="description" required style="width: 95%; padding: 8px; margin-bottom: 10px;"></textarea>
+            </div>
+            <div>
+                <label for="deadline">Deadline:</label><br>
+                <input type="datetime-local" id="formDeadline" name="deadline" required style="padding: 8px; margin-bottom: 10px;">
+            </div>
+            <div>
+                <label for="assigned_recruiter_email">Assigned Recruiter Email:</label><br>
+                <input type="email" id="formEmail" name="assigned_recruiter_email" required style="width: 95%; padding: 8px; margin-bottom: 10px;">
+            </div>
+            <button type="button" onclick="createTicket()">Create Ticket</button>
+        </form>
+
         <table>
             <thead>
                 <tr>
@@ -45,6 +71,17 @@
 </div>
 <script>
 let token = localStorage.getItem('token') || '';
+
+function displayMessage(message, isSuccess) {
+    const messageArea = document.getElementById('messageArea');
+    messageArea.textContent = message;
+    messageArea.className = isSuccess ? 'message-success' : 'message-error';
+    messageArea.style.display = 'block';
+    // Hide message after 5 seconds
+    setTimeout(() => {
+        messageArea.style.display = 'none';
+    }, 5000);
+}
 
 function showDashboard() {
     document.getElementById('loginBox').style.display = 'none';
@@ -71,9 +108,14 @@ function login() {
             token = data.token;
             localStorage.setItem('token', token);
             showDashboard();
+            displayMessage('Login successful!', true);
         } else {
-            alert('Login failed!');
+            displayMessage('Login failed! Check credentials.', false);
         }
+    })
+    .catch(error => {
+        console.error('Login error:', error);
+        displayMessage('Login request failed. Please try again.', false);
     });
 }
 
@@ -87,22 +129,108 @@ function fetchTickets() {
     fetch('/api/tickets/', {
         headers: { 'Authorization': 'Token ' + token }
     })
-    .then(r => r.json())
+    .then(response => {
+        if (!response.ok) {
+            // Handle non-2xx responses (e.g., 401, 429)
+            return response.json().then(errData => {
+                throw new Error(errData.detail || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         const tbody = document.getElementById('ticketsTable');
-        tbody.innerHTML = '';
-        data.forEach(ticket => {
-            let status = '';
-            if (ticket.sla_missed) {
-                status = '<span class="sla-missed">SLA Missed</span>';
-            } else if (ticket.sla_warning_sent) {
-                status = '<span class="sla-warning">SLA Warning</span>';
-            } else {
-                status = '<span class="sla-ok">OK</span>';
+        tbody.innerHTML = ''; // Clear existing rows
+        if (Array.isArray(data)) {
+            data.forEach(ticket => {
+                let status = '';
+                if (ticket.sla_missed) {
+                    status = '<span class="sla-missed">SLA Missed</span>';
+                } else if (ticket.sla_warning_sent) {
+                    status = '<span class="sla-warning">SLA Warning</span>';
+                } else {
+                    status = '<span class="sla-ok">OK</span>';
+                }
+                tbody.innerHTML += `<tr><td>${ticket.title}</td><td>${new Date(ticket.deadline).toLocaleString()}</td><td>${status}</td></tr>`;
+            });
+        } else {
+            // Handle cases where data might not be an array (e.g. rate limit response from DRF-ratelimit)
+            if (data.detail) { // DRF-ratelimit often returns error details in 'detail'
+                 throw new Error(data.detail);
             }
-            tbody.innerHTML += `<tr><td>${ticket.title}</td><td>${new Date(ticket.deadline).toLocaleString()}</td><td>${status}</td></tr>`;
-        });
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching tickets:', error);
+        displayMessage(`Error fetching tickets: ${error.message}`, false);
+        if (error.message.includes("Authentication credentials were not provided") || error.message.includes("Invalid token")) {
+            logout(); // If auth error, force logout
+        }
     });
+}
+
+function createTicket() {
+    const title = document.getElementById('formTitle').value;
+    const description = document.getElementById('formDescription').value;
+    const deadline = document.getElementById('formDeadline').value;
+    const assigned_recruiter_email = document.getElementById('formEmail').value;
+
+    if (!title || !description || !deadline || !assigned_recruiter_email) {
+        displayMessage('Please fill in all fields for the new ticket.', false);
+        return;
+    }
+
+    const ticketData = {
+        title,
+        description,
+        deadline,
+        assigned_recruiter_email,
+        status: 'Open' // Default status, or remove if backend handles it
+    };
+
+    fetch('/api/tickets/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token ' + token,
+            'X-CSRFToken': getCookie('csrftoken') // Django might need CSRF token for POST
+        },
+        body: JSON.stringify(ticketData)
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(errData => { // Try to get error details from body
+                throw new Error(errData.detail || Object.values(errData).join(', ') || `HTTP error! status: ${response.status}`);
+            });
+        }
+    })
+    .then(data => {
+        displayMessage('Ticket created successfully!', true);
+        fetchTickets(); // Refresh the list
+        document.getElementById('createTicketForm').reset(); // Clear form
+    })
+    .catch(error => {
+        console.error('Error creating ticket:', error);
+        displayMessage(`Failed to create ticket: ${error.message}`, false);
+    });
+}
+
+// Helper function to get CSRF token if needed
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 if (token) {
