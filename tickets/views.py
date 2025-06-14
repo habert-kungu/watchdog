@@ -24,21 +24,17 @@ class TicketViewSet(viewsets.ModelViewSet):
         print("[DEBUG] perform_create called")
         ticket = serializer.save(owner=self.request.user)
         try:
-            print(f"[DEBUG] Attempting to send email to {self.request.user.email}")
+            print(f"[DEBUG] Preparing to send email for new ticket '{ticket.title}' to {self.request.user.email}")
             send_mail(
                 subject=f"New Ticket Created: {ticket.title}",
                 message=f"A new ticket has been created.\n\nTitle: {ticket.title}\nDescription: {ticket.description}\nDeadline: {ticket.deadline}",
-                from_email=None,
+                from_email=None,  # Uses DEFAULT_FROM_EMAIL from settings
                 recipient_list=[self.request.user.email],
                 fail_silently=False,
             )
-            print(
-                f"[EMAIL SUCCESS] Email sent for ticket '{ticket.title}' to {self.request.user.email}"
-            )
+            print(f"[EMAIL SUCCESS] New ticket confirmation email sent for '{ticket.title}' to {self.request.user.email}")
         except Exception as e:
-            print(
-                f"[EMAIL ERROR] Failed to send email for ticket '{ticket.title}' to {self.request.user.email}: {e}"
-            )
+            print(f"[EMAIL ERROR] Failed to send new ticket confirmation email for '{ticket.title}' to {self.request.user.email}. Error: {e}")
         self.notification_message = f"Ticket '{ticket.title}' created. Please check your email for confirmation."
 
     def create(self, request, *args, **kwargs):
