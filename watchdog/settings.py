@@ -33,7 +33,23 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["watchdog-kp4h.onrender.com", "localhost", "127.0.0.1"]
+# Allow all hosts in development, but only specific hosts in production
+if DEBUG:
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [
+        "watchdog-kp4h.onrender.com",
+        "localhost",
+        "127.0.0.1",
+        ".onrender.com",  # Allows all subdomains on render.com
+    ]
+
+# CSRF Trusted Origins for secure HTTPS connections
+CSRF_TRUSTED_ORIGINS = [
+    "https://watchdog-kp4h.onrender.com",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
 CSRF_TRUSTED_ORIGINS = ["https://watchdog-kp4h.onrender.com"]
 
 
