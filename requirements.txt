@@ -3,3 +3,4 @@ Django>=4.2
 djangorestframework-simplejwt
 django-ratelimit
 python-dotenv
+gunicorn
