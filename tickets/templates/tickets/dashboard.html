@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLA Watchdog - Recruiter Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+        .container { max-width: 700px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }
+        h1 { text-align: center; color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+        th, td { padding: 10px 8px; border-bottom: 1px solid #eee; text-align: left; }
+        th { background: #f0f0f0; }
+        .sla-missed { color: #fff; background: #e74c3c; border-radius: 4px; padding: 2px 8px; }
+        .sla-warning { color: #fff; background: #f39c12; border-radius: 4px; padding: 2px 8px; }
+        .sla-ok { color: #fff; background: #27ae60; border-radius: 4px; padding: 2px 8px; }
+        .login { margin-bottom: 24px; }
+        .login input { padding: 6px; margin-right: 8px; }
+        .logout { float: right; cursor: pointer; color: #2980b9; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>SLA Watchdog</h1>
+    <div class="login" id="loginBox">
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
+    <div id="dashboard" style="display:none;">
+        <span class="logout" onclick="logout()">Logout</span>
+        <h2>Tickets</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Deadline</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="ticketsTable">
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+let token = localStorage.getItem('token') || '';
+
+function showDashboard() {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('dashboard').style.display = '';
+    fetchTickets();
+}
+
+function showLogin() {
+    document.getElementById('loginBox').style.display = '';
+    document.getElementById('dashboard').style.display = 'none';
+}
+
+function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    fetch('/api-token-auth/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.token) {
+            token = data.token;
+            localStorage.setItem('token', token);
+            showDashboard();
+        } else {
+            alert('Login failed!');
+        }
+    });
+}
+
+function logout() {
+    token = '';
+    localStorage.removeItem('token');
+    showLogin();
+}
+
+function fetchTickets() {
+    fetch('/api/tickets/', {
+        headers: { 'Authorization': 'Token ' + token }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const tbody = document.getElementById('ticketsTable');
+        tbody.innerHTML = '';
+        data.forEach(ticket => {
+            let status = '';
+            if (ticket.sla_missed) {
+                status = '<span class="sla-missed">SLA Missed</span>';
+            } else if (ticket.sla_warning_sent) {
+                status = '<span class="sla-warning">SLA Warning</span>';
+            } else {
+                status = '<span class="sla-ok">OK</span>';
+            }
+            tbody.innerHTML += `<tr><td>${ticket.title}</td><td>${new Date(ticket.deadline).toLocaleString()}</td><td>${status}</td></tr>`;
+        });
+    });
+}
+
+if (token) {
+    showDashboard();
+} else {
+    showLogin();
+}
+</script>
+</body>
+</html>

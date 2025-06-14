@@ -18,3 +18,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+def dashboard(request):
+    return render(request, "tickets/dashboard.html")
